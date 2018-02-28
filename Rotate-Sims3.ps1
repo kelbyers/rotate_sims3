@@ -12,12 +12,16 @@ if ($root -match '.*(?= - [0-9\-]*)') {
 }
 
 echo "Rotating for $($root)"
+echo "base = $($base)"
+Get-ChildItem $base.parent.FullName -Directory
 
 $candidates = Get-ChildItem $base.parent.FullName -Directory |
   Where {
     $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext))`$"
   } | sort CreationTime
 
+echo "candidates:"
+$candidates
 
 while ($true) {
   Foreach ($candidate in $candidates[0..($candidates.length - 2)])
@@ -40,6 +44,9 @@ while ($true) {
   if ($once) {
     echo "Started with -once, done"
     break
+  } else {
+    echo "Loop complete, waiting..."
+    Start-Sleep -s 57
   }
-  Start-Sleep -s 57
 }
+# Start-Sleep -s 5
