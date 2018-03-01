@@ -24,13 +24,13 @@ echo "candidates:"
 $candidates
 
 while ($true) {
-  Foreach ($candidate in $candidates[0..($candidates.length - 2)])
-  {
-    $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
-    echo "$($candidate.Name) : $($ds)"
-    Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
-  }
   if ($candidates.Length -gt 0) {
+    Foreach ($candidate in $candidates[0..($candidates.length - 2)])
+    {
+      $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
+      echo "$($candidate.Name) : $($ds)"
+      Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
+    }
     $newest = $candidates[-1]
     $new_name = $root + $ext
     if ($newest.Name -ne $new_name) {
@@ -49,4 +49,4 @@ while ($true) {
     Start-Sleep -s 57
   }
 }
-Start-Sleep -s 5
+Start-Sleep -s 50
