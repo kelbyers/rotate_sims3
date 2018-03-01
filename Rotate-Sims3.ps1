@@ -7,8 +7,8 @@ if ($base -Is [System.IO.FileInfo]) {
 $ext = $base.extension
 
 $root = $base.Name.replace("$($base.Extension)", '').replace('-save`$','')
-if ($root -match '.*(?= - [0-9\-]*)') {
-      $root = $matches[0]
+if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '.*(?=\d+)') {
+  $root = $matches[0]
 }
 
 echo "Rotating for $($root)"
@@ -49,4 +49,4 @@ while ($true) {
     Start-Sleep -s 57
   }
 }
-# Start-Sleep -s 5
+Start-Sleep -s 5
