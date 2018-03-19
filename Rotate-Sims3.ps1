@@ -49,4 +49,4 @@ while ($true) {
     Start-Sleep -s 57
   }
 }
-Start-Sleep -s 50
+Start-Sleep -s 5
