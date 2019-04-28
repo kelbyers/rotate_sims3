@@ -1,4 +1,4 @@
-Param( [string]$savePath, [switch]$once )
+Param( [string]$savePath, [switch]$once, [switch]$timeStampAll )
 
 $base = (get-item $savePath)
 if ($base -Is [System.IO.FileInfo]) {
@@ -25,20 +25,29 @@ $candidates
 
 while ($true) {
   if ($candidates.Length -gt 0) {
-    Foreach ($candidate in $candidates[0..($candidates.length - 2)])
+    if ($timeStampAll) {
+      $toTimeStamp = $candidates
+      $noTimeStamp = @()
+    } else {
+      $toTimeStamp = $candidates[0..($candidates.length - 2)]
+      $noTimeStamp = @($candidates[-1])
+    }
+    Foreach ($candidate in $toTimeStamp)
     {
       $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
       echo "$($candidate.Name) : $($ds)"
       Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
     }
-    $newest = $candidates[-1]
-    $new_name = $root + $ext
-    if ($newest.Name -ne $new_name) {
-      $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
-      echo "$($newest.Name) : $($ds)"
-      Rename-Item $newest.FullName -NewName "$($root)$($ext)"
-    } else {
-      echo "$($new_name) already rotated"
+    Foreach ($candidate in $noTimeStamp) {
+      $newest = $candidate
+      $new_name = $root + $ext
+      if ($newest.Name -ne $new_name) {
+        $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
+        echo "$($newest.Name) : $($ds) : (no timestamp added)"
+        Rename-Item $newest.FullName -NewName "$($root)$($ext)"
+      } else {
+        echo "$($new_name) already rotated"
+      }
     }
   }
   if ($once) {
