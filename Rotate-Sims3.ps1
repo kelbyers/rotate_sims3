@@ -1,4 +1,4 @@
-Param( [string]$savePath, [switch]$once )
+Param( [string]$savePath, [switch]$once, [switch]$timeStampAll )
 
 $base = (get-item $savePath)
 if ($base -Is [System.IO.FileInfo]) {
@@ -11,41 +11,50 @@ if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '.*(?=\d+)') {
   $root = $matches[0]
 }
 
-echo "Rotating for $($root)"
-echo "base = $($base)"
+Write-Output "Rotating for $($root)"
+Write-Output "base = $($base)"
 Get-ChildItem $base.parent.FullName -Directory
 
 $candidates = Get-ChildItem $base.parent.FullName -Directory |
-  Where {
+  Where-Object {
     $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext))`$"
-  } | sort CreationTime
+  } | Sort-Object CreationTime
 
-echo "candidates:"
+Write-Output "candidates:"
 $candidates
 
 while ($true) {
   if ($candidates.Length -gt 0) {
-    Foreach ($candidate in $candidates[0..($candidates.length - 2)])
+    if ($timeStampAll) {
+      $toTimeStamp = $candidates
+      $noTimeStamp = @()
+    } else {
+      $toTimeStamp = $candidates[0..($candidates.length - 2)]
+      $noTimeStamp = @($candidates[-1])
+    }
+    Foreach ($candidate in $toTimeStamp)
     {
       $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
-      echo "$($candidate.Name) : $($ds)"
+      Write-Output "$($candidate.Name) : $($ds)"
       Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
     }
-    $newest = $candidates[-1]
-    $new_name = $root + $ext
-    if ($newest.Name -ne $new_name) {
-      $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
-      echo "$($newest.Name) : $($ds)"
-      Rename-Item $newest.FullName -NewName "$($root)$($ext)"
-    } else {
-      echo "$($new_name) already rotated"
+    Foreach ($candidate in $noTimeStamp) {
+      $newest = $candidate
+      $new_name = $root + $ext
+      if ($newest.Name -ne $new_name) {
+        $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
+        Write-Output "$($newest.Name) : $($ds) : (no timestamp added)"
+        Rename-Item $newest.FullName -NewName "$($root)$($ext)"
+      } else {
+        Write-Output "$($new_name) already rotated"
+      }
     }
   }
   if ($once) {
-    echo "Started with -once, done"
+    Write-Output "Started with -once, done"
     break
   } else {
-    echo "Loop complete, waiting..."
+    Write-Output "Loop complete, waiting..."
     Start-Sleep -s 57
   }
 }
