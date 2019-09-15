@@ -7,7 +7,7 @@ if ($base -Is [System.IO.FileInfo]) {
 $ext = $base.extension
 
 $root = $base.Name.replace("$($base.Extension)", '').replace('-save`$','')
-while ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '^.*\D(?=\d+$)') {
+if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '^.*\D(?=\d+$)') {
   $root = $matches[0]
 }
 
