@@ -11,19 +11,18 @@ if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '^.*\D(?=\d+$)') {
   $root = $matches[0]
 }
 
-Write-Output "Rotating for $($root)"
-Write-Output "base = $($base)"
-Get-ChildItem $base.parent.FullName -Directory
-
-$candidates = Get-ChildItem $base.parent.FullName -Directory |
-  Where-Object {
-    $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext))`$"
-  } | Sort-Object CreationTime
-
-Write-Output "candidates:"
-$candidates
-
 while ($true) {
+  Write-Output "Rotating for $($root)"
+  Write-Output "base = $($base)"
+  Get-ChildItem $base.parent.FullName -Directory
+
+  $candidates = Get-ChildItem $base.parent.FullName -Directory |
+    Where-Object {
+      $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext))`$"
+    } | Sort-Object CreationTime
+
+  Write-Output "candidates:"
+  $candidates
   if ($candidates.Length -gt 0) {
     if ($timeStampAll) {
       $toTimeStamp = $candidates
