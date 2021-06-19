@@ -18,7 +18,7 @@ while ($true) {
 
   $candidates = Get-ChildItem $base.parent.FullName -Directory |
     Where-Object {
-      $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext))`$"
+      $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext)(.backup)?)`$"
     } | Sort-Object CreationTime
 
   Write-Output "candidates:"
