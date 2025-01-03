@@ -1,4 +1,4 @@
-use std log
+use std/log
 
 def get-base [save_path] {
     let type = ($save_path | path type)
