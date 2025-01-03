@@ -27,16 +27,21 @@ def split-root-extension [save_path] {
 }
 
 def get-candidates [base] {
+    let root = ([$base.parent $base.root] | str join '\')
+    let pattern = (
+        '^' +
+        ($root | str replace --all '\' '\\') +
+        '(\d+)?\.' +
+        $base.extension +
+        '(\.backup)?$'
+    )
+    log debug $"root: ($root)"
+    log debug $"pattern: ($pattern)"
     (
         ls $base.parent |
         where type == 'dir' |
-        get name |
-        str replace ($base.parent + '\') ''
-        |
-        where {|r| $r =~ $"^($base.root)\(\\d+)?\\.($base.extension)\(\\.backup)?$"}
-        # get name |
-        # path parse |
-        # where extension == 'sims3'
+        where {|r| $r.name =~ $pattern } |
+        select name modified
     )
 }
 
