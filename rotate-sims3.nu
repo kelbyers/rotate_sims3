@@ -1,6 +1,6 @@
 use std/log
 
-def get-base [save_path] {
+export def get-base [save_path] {
     let type = ($save_path | path type)
     let directory = ($save_path | path dirname)
     log debug $"save_path: ($save_path)"
@@ -9,10 +9,8 @@ def get-base [save_path] {
 
     if $type == "file" {
         return $directory
-    } else if ($save_path | str ends-with "\\") {
-        return ($save_path | str substring 0..-2)
     } else {
-        return $save_path
+        return ($save_path | path split | path join)
     }
 }
 
