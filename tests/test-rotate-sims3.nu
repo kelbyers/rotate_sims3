@@ -62,13 +62,10 @@ def "test run-in-tmpdir" [] {
 # ignore
 def "test no-dir" [] {
     run-in-tmpdir {|root|
-        mut passed = true
-        try {
+        assert error {||
             rm --recursive --force $root
             assert ($root | path exists)
-            $passed = false
-        }
-        assert $passed
+        } $"($root) should not exist"
     }
 }
 
@@ -173,6 +170,41 @@ def "test split-root-extension with timestamp" [] {
         assert equal $root $split.parent
         assert equal $extension $split.extension
         assert equal $expected $split.root
+    }
+}
+
+def "test split-root-extension fails for non sims3 save" [] {
+    run-in-tmpdir {|root|
+        let non_save = (setup-dirs $root a.ho).0
+
+        assert error {||
+            split-root-extension $non_save
+        } "should not accept non-sims3 save"
+    }
+}
+
+def "test split-root-extension fails for non sims3 backup" [] {
+    run-in-tmpdir {|root|
+        let non_save = (setup-dirs $root a.ho.backup).0
+
+        assert error {||
+            split-root-extension $non_save
+        } "should not accept non-sims3 save"
+    }
+}
+
+def "test split-root-extension for sims3.backup save" [] {
+    run-in-tmpdir {|root|
+        let extension = 'sims3'
+        let expected = 'a'
+        let backup_save = (setup-dirs $root a.sims3.backup).0
+
+        let split = (split-root-extension $backup_save)
+
+        assert equal $root $split.parent
+        assert equal $extension $split.extension
+        assert equal $expected $split.root
+
     }
 }
 

@@ -15,11 +15,44 @@ export def get-base [save_path] {
 }
 
 export def split-root-extension [save_path] {
-    let base = (get-base $save_path | path parse)
-    let root = ($base.stem | str replace -r '( - [-0-9]*)|(\d+)$' '')
+    let base = (
+        get-base $save_path
+        | path parse # split into components
+        | each {|p| # split off '.backup' extenion and report the real one
+            if ($p.extension == 'backup') {
+                let u = ($p.stem | path parse) # get the non-backup extension
+                return (
+                    $p
+                    | update stem $u.stem # stem with extension removed
+                    | update extension $u.extension # real extension
+                )
+            } else $p # not a backup, so just pass it through
+        }
+        | update stem {|p|
+            # strip off timestamp or save instance number
+            ($p.stem | str replace -r '( - [-0-9]*)|(\d+)$' '')
+        }
+    )
+
+    log debug $"base: ($base)"
+
+    if ($base.extension != 'sims3') {
+        # after processing it above, this is not a sims3 backup directory
+        let span = (metadata $save_path).span
+
+        # throw an error
+        error make {
+            msg: "Cannot rotate non-sims3 saves"
+            label: {
+                text: "need a '.sims3' directory"
+                span: $span
+            }
+        }
+    }
+
     return ({
         parent: $base.parent,
-        root: $root,
+        root: $base.stem,
         extension: $base.extension
     })
 }
