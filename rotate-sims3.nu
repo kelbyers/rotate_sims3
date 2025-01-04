@@ -14,7 +14,7 @@ export def get-base [save_path] {
     }
 }
 
-def split-root-extension [save_path] {
+export def split-root-extension [save_path] {
     let base = (get-base $save_path | path parse)
     let root = ($base.stem | str replace -r '( - [-0-9]*)|(\d+)$' '')
     return ({
@@ -24,7 +24,7 @@ def split-root-extension [save_path] {
     })
 }
 
-def get-candidates [base] {
+export def get-candidates [base] {
     let root = ([$base.parent $base.root] | str join '\')
     let pattern = (
         '^' +
