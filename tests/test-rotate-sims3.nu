@@ -5,22 +5,53 @@ use ../rotate-sims3.nu *
 
 let ts_format = '%Y%m%d-%H%M%S'
 
+def opt-filter [variable filt] {
+    if (($variable in $env) and ($env | get $variable | is-not-empty)) {
+        $in | filter $filt
+    } else $in
+}
+
+# ignore
+def "test opt-filter passes through" [] {
+    assert ('MADE_UP_VAR' not-in $env)
+    let source = [ab bc cd da]
+    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
+    assert equal $got $source
+}
+
+# ignore
+def "test opt-filter filters from env variable" [] {
+    assert ('MADE_UP_VAR' not-in $env)
+    $env.MADE_UP_VAR = 'c'
+    let source = [ab bc cd da]
+    let expected = [bc cd]
+    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
+    assert equal $got $expected
+}
+
+def filter-test-defs [key]: list -> list {
+    (
+        $in
+        | where ($it.name | str starts-with $"($key) ")
+            and not ($it.description | str starts-with "ignore")
+        | opt-filter 'NUTESTS' {|t| $t.name | str contains $env.NUTESTS}
+    )
+}
+
 def get-tests [] {
     let command_list = (scope commands | where $it.type == 'custom')
     let focus_tests = (
         $command_list
-        | where ($it.name | str starts-with "f-test")
-            and not ($it.description | str starts-with "ignore")
+        | filter-test-defs "f-test"
     )
     log debug $"focus: ($focus_tests)"
-    if (($focus_tests | length) > 0) {
+    if ($focus_tests | is-not-empty) {
         return ( $focus_tests )
     }
     log debug "no focus tests"
     return (
         $command_list
-        | where ($it.name | str starts-with "test ")
-            and not ($it.description | str starts-with "ignore")
+        | filter-test-defs "test"
     )
 }
 
