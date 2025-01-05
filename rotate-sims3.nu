@@ -76,9 +76,27 @@ export def get-candidates [base] {
     )
 }
 
+export def get-timestamp-name []: record -> record {
+
+    (
+        $in
+        | update name {|c|
+            let timestamp = ($c.created | format date '%Y%m%d-%H%M%S')
+            (
+                $c.name
+                | path parse
+                | update stem {|p|
+                    $p.stem + ' - ' + $timestamp
+                }
+                | path join
+            )
+        }
+    )
+}
+
 def main [
     save_path
-    --once
+    --continuous
     --timeStampAll
 ] {
     if not ($save_path | path exists) {
@@ -88,9 +106,9 @@ def main [
     let base = (split-root-extension $save_path)
 
     while true {
-        let candidates = (get-candidates $base)
+        let candidates = (get-candidates $base | sort-by created)
 
-        print $candidates
-        exit 0
+
+        if not $continuous { exit 0 }
     }
 }

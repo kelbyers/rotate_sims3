@@ -272,7 +272,7 @@ def "test get-candidates has the name of the save" [] {
     }
 }
 
-def "f-test get-candidates has the created time of the save" [] {
+def "test get-candidates has the created time of the save" [] {
     run-in-tmpdir {|root|
         let extension = 'sims3'
         let expected = 'a'
@@ -346,4 +346,18 @@ def "test get-candidates with timestamps" [] {
         log debug $"candidates: ($candidates | get name)"
         assert equal ($candidates | get name | sort) ($dirs | sort)
     }
+}
+
+#
+def "test get-timestamp-name" [] {
+    let name = ([a b c d.sims3] | path join)
+    let created = (1736039242 | into datetime -f %s | date to-timezone local)
+    let timestamp = '20250104-190722'
+    let expected = {
+        name: ([a b c $"d - ($timestamp).sims3"] | path join)
+        created: $created
+    }
+
+    let got = ( {name: $name created: $created} | get-timestamp-name)
+    assert equal $got $expected
 }
