@@ -11,48 +11,25 @@ def opt-filter [variable filt] {
     } else $in
 }
 
-# ignore
-def "test opt-filter passes through" [] {
-    assert ('MADE_UP_VAR' not-in $env)
-    let source = [ab bc cd da]
-    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
-    assert equal $got $source
-}
-
-# ignore
-def "test opt-filter filters from env variable" [] {
-    assert ('MADE_UP_VAR' not-in $env)
-    $env.MADE_UP_VAR = 'c'
-    let source = [ab bc cd da]
-    let expected = [bc cd]
-    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
-    assert equal $got $expected
-}
-
-def filter-test-defs [key]: list -> list {
-    (
+def filter-tests [] {
+    let test_list = (
         $in
-        | where ($it.name | str starts-with $"($key) ")
+        | where type == 'custom'
+            and name =~ '(f-)?test '
             and not ($it.description | str starts-with "ignore")
         | opt-filter 'NUTESTS' {|t| $t.name | str contains $env.NUTESTS}
     )
+
+    (
+        $test_list
+        | (where ($it.name | str starts-with 'f-test')
+        | if ($in | is-not-empty) { $in } else $test_list)
+    )
 }
 
+
 def get-tests [] {
-    let command_list = (scope commands | where $it.type == 'custom')
-    let focus_tests = (
-        $command_list
-        | filter-test-defs "f-test"
-    )
-    log debug $"focus: ($focus_tests)"
-    if ($focus_tests | is-not-empty) {
-        return ( $focus_tests )
-    }
-    log debug "no focus tests"
-    return (
-        $command_list
-        | filter-test-defs "test"
-    )
+    (scope commands | filter-tests)
 }
 
 def main [] {
@@ -81,6 +58,117 @@ def run-in-tmpdir [$cl] {
     let root = (mktemp --directory)
     do $cl $root
     rm --recursive --force $root
+}
+
+# ignore
+def "test opt-filter passes through" [] {
+    if ('MADE_UP_VAR' in $env ) {hide-env MADE_UP_VAR}
+    let source = [ab bc cd da]
+    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
+    assert equal $got $source
+}
+
+# ignore
+def "test opt-filter filters from env variable" [] {
+    $env.MADE_UP_VAR = 'c'
+    let source = [ab bc cd da]
+    let expected = [bc cd]
+    let got = ($source | opt-filter 'MADE_UP_VAR' {|i| $i | str contains $env.MADE_UP_VAR})
+    assert equal $got $expected
+}
+
+# ignore
+def "test filter-tests" [] {
+    hide-env NUTESTS
+    let commands = [
+        {name: 'doit',  type: 'special', description: ''}
+        {name: 'doit2',  type: 'custom', description: ''}
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: ''}
+        {name: "f-test focus",  type: 'special', description: ''}
+    ]
+    let expected = [
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: ''}
+    ]
+    let got = ($commands | filter-tests)
+    assert equal $got $expected
+}
+
+# ignore
+def "test filter-tests returns focus tests" [] {
+    hide-env NUTESTS
+
+    let commands = [
+        {name: 'doit',  type: 'special', description: ''}
+        {name: 'doit2',  type: 'custom', description: ''}
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: ''}
+        {name: "f-test focus",  type: 'custom', description: ''}
+        {name: "f-test two",  type: 'custom', description: ''}
+    ]
+    let expected = [
+        {name: "f-test focus",  type: 'custom', description: ''}
+        {name: "f-test two",  type: 'custom', description: ''}
+    ]
+    let got = ($commands | filter-tests)
+    assert equal $got $expected
+}
+
+# ignore
+def "test filter-tests ignores tests" [] {
+    hide-env NUTESTS
+
+    let commands = [
+        {name: 'doit',  type: 'special', description: ''}
+        {name: 'doit2',  type: 'custom', description: ''}
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: 'ignore'}
+        {name: "f-test two",  type: 'custom', description: 'ignore'}
+    ]
+    let expected = [
+        {name: "test one",  type: 'custom', description: ''}
+    ]
+    let got = ($commands | filter-tests)
+    assert equal $got $expected
+}
+
+# ignore
+def "test filter-tests ignores f-tests" [] {
+    hide-env NUTESTS
+
+    let commands = [
+        {name: 'doit',  type: 'special', description: ''}
+        {name: 'doit2',  type: 'custom', description: ''}
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: 'ignore'}
+        {name: "f-test one",  type: 'custom', description: 'ignore'}
+        {name: "f-test two",  type: 'custom', description: ''}
+    ]
+    let expected = [
+        {name: "f-test two",  type: 'custom', description: ''}
+    ]
+    let got = ($commands | filter-tests)
+    assert equal $got $expected
+}
+
+# ignore
+def "test filter-tests uses opt-filter" [] {
+    $env.NUTESTS = 'two'
+    let commands = [
+        {name: "test one",  type: 'custom', description: ''}
+        {name: "test two",  type: 'custom', description: ''}
+        {name: "test two with form",  type: 'custom', description: ''}
+        {name: "f-test one",  type: 'custom', description: ''}
+        {name: "f-test two",  type: 'custom', description: 'ignore'}
+    ]
+    let expected = [
+        {name: "test two",  type: 'custom', description: ''}
+        {name: "test two with form",  type: 'custom', description: ''}
+    ]
+
+    let got = ($commands | filter-tests)
+    assert equal $got $expected
 }
 
 # ignore
