@@ -258,6 +258,34 @@ def "test get-candidates with backups" [] {
     }
 }
 
+#
+def "test get-candidates has the name of the save" [] {
+    run-in-tmpdir {|root|
+        let extension = 'sims3'
+        let expected = 'a'
+        let dir_a = (setup-dirs $root $"($expected)23.($extension)").0
+
+        let candidates = (get-candidates (split-root-extension $dir_a))
+        let columns = ($candidates | columns)
+
+        assert ('name' in $columns)
+    }
+}
+
+def "f-test get-candidates has the created time of the save" [] {
+    run-in-tmpdir {|root|
+        let extension = 'sims3'
+        let expected = 'a'
+        let dir_a = (setup-dirs $root $"($expected)23.($extension)").0
+
+        let candidates = (get-candidates (split-root-extension $dir_a))
+        let columns = ($candidates | columns)
+
+        log debug $"columns: ($columns)"
+        assert ('created' in $columns)
+    }
+}
+
 def add-time-stamps [dirs now] {
     let count = $dirs | length
 

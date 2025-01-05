@@ -69,10 +69,10 @@ export def get-candidates [base] {
     log debug $"root: ($root)"
     log debug $"pattern: ($pattern)"
     (
-        ls $base.parent |
+        ls -l $base.parent |
         where type == 'dir' |
         where {|r| $r.name =~ $pattern } |
-        select name modified
+        select name created
     )
 }
 
