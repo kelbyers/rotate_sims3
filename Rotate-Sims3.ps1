@@ -1,60 +1,87 @@
-Param( [string]$savePath, [switch]$once, [switch]$timeStampAll )
 
-$base = (get-item $savePath)
-if ($base -Is [System.IO.FileInfo]) {
-  $base = $base.Directory
-}
-$ext = $base.extension
+function Get-Root {
+    # takes a parameter that is a FileSystemInfo object
+    Param( [System.IO.FileSystemInfo]$base )
 
-$root = $base.Name.replace("$($base.Extension)", '').replace('-save`$','')
-if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '^.*\D(?=\d+$)') {
-  $root = $matches[0]
-}
-
-while ($true) {
-  Write-Output "Rotating for $($root)"
-  Write-Output "base = $($base)"
-  Get-ChildItem $base.parent.FullName -Directory
-
-  $candidates = Get-ChildItem $base.parent.FullName -Directory |
-    Where-Object {
-      $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext)(.backup)?)`$"
-    } | Sort-Object CreationTime
-
-  Write-Output "candidates:"
-  $candidates
-  if ($candidates.Length -gt 0) {
-    if ($timeStampAll) {
-      $toTimeStamp = $candidates
-      $noTimeStamp = @()
-    } else {
-      $toTimeStamp = $candidates[0..($candidates.length - 2)]
-      $noTimeStamp = @($candidates[-1])
+    # check if this is a sims3 save directory
+    switch ($base.Extension) {
+        '.sims3' { break}
+        '.sims3.backup' { break}
+        default {
+            throw 'Not a sims3 save directory'
+         }
     }
-    Foreach ($candidate in $toTimeStamp)
-    {
-      $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
-      Write-Output "$($candidate.Name) : $($ds)"
-      Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
-    }
-    Foreach ($candidate in $noTimeStamp) {
-      $newest = $candidate
-      $new_name = $root + $ext
-      if ($newest.Name -ne $new_name) {
-        $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
-        Write-Output "$($newest.Name) : $($ds) : (no timestamp added)"
-        Rename-Item $newest.FullName -NewName "$($root)$($ext)"
-      } else {
-        Write-Output "$($new_name) already rotated"
-      }
-    }
-  }
-  if ($once) {
-    Write-Output "Started with -once, done"
-    break
-  } else {
-    Write-Output "Loop complete, waiting..."
-    Start-Sleep -s 57
-  }
+
+    return ''
 }
-Start-Sleep -s 5
+
+function Rotate-Sims3 {
+    Param( [string]$savePath, [switch]$once, [switch]$timeStampAll )
+
+    $base = (get-item $savePath)
+    if ($base -Is [System.IO.FileInfo]) {
+        $base = $base.Directory
+    }
+    $ext = $base.extension
+
+    $root = $base.Name.replace("$($base.Extension)", '').replace('-save`$', '')
+    if ($root -match '.*[^0-9](?= - [0-9\-]+)' -or $root -match '^.*\D(?=\d+$)') {
+        $root = $matches[0]
+    }
+
+    while ($true) {
+        Write-Output "Rotating for $($root)"
+        Write-Output "base = $($base)"
+        Get-ChildItem $base.parent.FullName -Directory
+
+        $candidates = Get-ChildItem $base.parent.FullName -Directory |
+        Where-Object {
+            $_.Name -match "`^($(${root})$(${ext})(.backup)?|$($root)[0-9]+$($ext)(.backup)?)`$"
+        } | Sort-Object CreationTime
+
+        Write-Output "candidates:"
+        $candidates
+        if ($candidates.Length -gt 0) {
+            if ($timeStampAll) {
+                $toTimeStamp = $candidates
+                $noTimeStamp = @()
+            }
+            else {
+                $toTimeStamp = $candidates[0..($candidates.length - 2)]
+                $noTimeStamp = @($candidates[-1])
+            }
+            Foreach ($candidate in $toTimeStamp) {
+                $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
+                Write-Output "$($candidate.Name) : $($ds)"
+                Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
+            }
+            Foreach ($candidate in $noTimeStamp) {
+                $newest = $candidate
+                $new_name = $root + $ext
+                if ($newest.Name -ne $new_name) {
+                    $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
+                    Write-Output "$($newest.Name) : $($ds) : (no timestamp added)"
+                    Rename-Item $newest.FullName -NewName "$($root)$($ext)"
+                }
+                else {
+                    Write-Output "$($new_name) already rotated"
+                }
+            }
+        }
+        if ($once) {
+            Write-Output "Started with -once, done"
+            break
+        }
+        else {
+            Write-Output "Loop complete, waiting..."
+            Start-Sleep -s 57
+        }
+    }
+    Start-Sleep -s 5
+}
+
+# run Rotate-Sims3 if invoked from the command line
+if ($MyInvocation.InvocationName -ne '.') {
+    write-host "Running Rotate-Sims3 with args: $args"
+    Rotate-Sims3 @args
+}
