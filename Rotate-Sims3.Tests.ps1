@@ -36,13 +36,13 @@ Describe 'Test-Locked' {
     }
 
     It 'checks all the files in a directory to see if any of them are locked' {
-        $Files = (Get-ChildItem $TestDir.FullName -Recurse)
+        $Files = (Get-ChildItem $TestDir -Recurse)
 
         foreach ($File in $Files) {
             Write-Debug "Testing $($File.FullName)"
             $locked = [IO.File]::OpenWrite($File.FullName)
 
-            Test-Locked $TestDir.FullName | Should -BeTrue
+            Test-Locked $TestDir | Should -BeTrue
             $locked.close()
         }
     }
@@ -51,7 +51,7 @@ Describe 'Test-Locked' {
         # lock the other file
         $locked = [IO.File]::OpenWrite($OtherFile.FullName)
 
-        Test-Locked $TestDir.FullName | Should -BeFalse
+        Test-Locked $TestDir | Should -BeFalse
 
         $locked.close()
     }
@@ -193,4 +193,71 @@ Describe 'Test-ProperlyAged' {
         $Script:MinimumAge | Should -Be 30
     }
 
+}
+
+# Describe 'Start-SleepProgressive' {
+
+# }
+
+Describe 'Wait-ProperlyAged' {
+    BeforeAll {
+        # save the original minimum age
+        $script:originalMinimumAge = $script:MinimumAge
+        # save the original max sleep time
+        $script:originalMaxSleep = $script:MaxSleep
+        # save the original max check time
+        $script:originalMaxCheckTime = $script:MaxCheckTime
+    }
+
+    AfterEach {
+        # reset the minimum age
+        $script:MinimumAge = $script:originalMinimumAge
+        # reset the max sleep time
+        $script:MaxSleep = $script:originalMaxSleep
+        # reset the max check time
+        $script:MaxCheckTime = $script:originalMaxCheckTime
+    }
+
+    BeforeEach {
+        # mock Test-ProperlyAged
+        Mock Test-ProperlyAged {
+            $script:checks++ ;
+            $properlyAged = ($script:checks -ge $script:expectedChecks)
+            return  $properlyAged
+        }
+        Mock Start-Sleep {
+            Write-Debug "Mock sleep"
+        }
+    }
+
+    It 'waits until all files in a directory are at least the minimum age' {
+        $script:expectedChecks = 3
+        $script:checks = 0
+
+        Wait-ProperlyAged 'TestDrive:\'
+        Should -Invoke Test-ProperlyAged -Exactly $expectedChecks
+        Should -Invoke Start-Sleep -Exactly ($expectedChecks - 1)
+    }
+
+    It 'should not wait when all files are old enough' {
+        $script:expectedChecks = 1
+        $script:checks = 0
+
+        Wait-ProperlyAged 'TestDrive:\'
+        Should -Invoke Test-ProperlyAged -Exactly $expectedChecks
+        Should -Invoke Start-Sleep -Exactly 0
+    }
+
+    It -skip 'should progressively wait longer between checks' {
+        $script:expectedChecks = 3
+        $script:checks = 0
+
+        Wait-ProperlyAged 'TestDrive:\'
+        Should -Invoke Test-ProperlyAged -Exactly $expectedChecks
+        $sleepTime = 1
+        for ($i = 1; $i -lt $expectedChecks; $i++) {
+            $sleepTime *= $i
+            Should -Invoke Start-Sleep -Exactly 1 -ParameterFilter { $Seconds -eq $sleepTime }
+        }
+    }
 }

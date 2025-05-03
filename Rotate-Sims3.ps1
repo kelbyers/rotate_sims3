@@ -84,6 +84,17 @@ function Wait-Unlocked {
     }
 }
 
+# Wait-ProperlyAged waits until all files in a directory are at least the
+# minimum age
+function Wait-ProperlyAged {
+    Param( [string]$path )
+
+    while (!(Test-ProperlyAged $path)) {
+        Start-Sleep -s 5
+    }
+    return
+}
+
 function Get-Root {
     # takes a parameter that is a FileSystemInfo object
     Param( [System.IO.FileSystemInfo]$base )
@@ -138,7 +149,8 @@ function Rotate-Sims3 {
             Foreach ($candidate in $toTimeStamp) {
                 $ds = $candidate.CreationTime.toString('yyyyMMdd-HHmmss')
                 Write-Output "$($candidate.Name) : $($ds)"
-                Wait-Unlocked $candidate.FullName
+                Wait-Unlocked $candidate
+                Wait-ProperlyAged $candidate
                 Rename-Item $candidate.FullName -NewName "$($root) - $($ds)$($ext)"
             }
             Foreach ($candidate in $noTimeStamp) {
@@ -147,7 +159,8 @@ function Rotate-Sims3 {
                 if ($newest.Name -ne $new_name) {
                     $ds = $newest.CreationTime.toString('yyyyMMdd-HHmmss')
                     Write-Output "$($newest.Name) : $($ds) : (no timestamp added)"
-                    Wait-Unlocked $newest.FullName
+                    Wait-Unlocked $newest
+                    Wait-ProperlyAged $newest
                     Rename-Item $newest.FullName -NewName "$($root)$($ext)"
                 }
                 else {
