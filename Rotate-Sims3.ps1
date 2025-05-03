@@ -16,6 +16,34 @@ function Test-Locked {
     return $false
 }
 
+## Test-ProperlyAged is a function that checks if all files in a directory are
+#  at least the minimum age
+function Test-ProperlyAged {
+    Param( [string]$path )
+
+    # get the current time
+    $now = Get-Date
+    # get the youngest last write time allowed
+    $youngestAllowed = $now.AddSeconds(-$script:MinimumAge)
+    # get all the files in the directory
+    $Files = Get-ChildItem $path -Recurse
+
+    foreach ($File in $Files) {
+        # DateTime.CompareTo returns:
+        #  -1 if $youngestAllowed is newer,
+        #   0 if they are the same, and
+        #   1 if $youngestAllowed is older
+        # Our logic says that $youngestAllowed should be NEWER,
+        # otherwise return false and stop
+        if ($youngestAllowed.CompareTo($File.LastWriteTime) -lt 0) {
+            return $false
+        }
+    }
+
+    # all files are at least the minimum age
+    return $true
+}
+
 ## Default values
 # These can be overridden
 
@@ -27,8 +55,10 @@ $script:MaxSleep = 30
 # directory to unlock
 $script:MaxCheckTime = 400 # seconds
 
+# $script:MinimumAge controls the minimum age of files in a directory
+$script:MinimumAge = 30
+
 # Wait-Unlocked waits until all files in a directory are unlocked
-#
 function Wait-Unlocked {
     Param( [string]$path )
 

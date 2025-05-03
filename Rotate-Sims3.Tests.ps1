@@ -58,6 +58,18 @@ Describe 'Test-Locked' {
 }
 
 Describe 'Wait-Unlocked' {
+    BeforeAll {
+        # save the original max sleep and max check time
+        $script:originalMaxSleep = $script:MaxSleep
+        $script:originalMaxCheckTime = $script:MaxCheckTime
+    }
+
+    AfterEach {
+        # reset the max sleep and max check time
+        $script:MaxSleep = $script:originalMaxSleep
+        $script:MaxCheckTime = $script:originalMaxCheckTime
+    }
+
     BeforeEach {
         Mock Test-Locked {
             $script:checks++ ;
@@ -137,4 +149,48 @@ Describe 'Wait-Unlocked' {
     It 'has a default max check time of 400 seconds' {
         $script:MaxCheckTime | Should -Be 400
     }
+}
+
+Describe 'Test-ProperlyAged' {
+    BeforeAll {
+        # save the original minimum age
+        $script:originalMinimumAge = $script:MinimumAge
+    }
+
+    AfterEach {
+        # reset the minimum age
+        $script:MinimumAge = $script:originalMinimumAge
+    }
+
+    BeforeEach {
+        # clear the test drive, sometimes these get left behind
+        Remove-Item -Force -Recurse 'TestDrive:\*'
+        # set up a temporary directory
+        $TestDir = New-Item -Path 'TestDrive:\' -Name 'TestDir' -ItemType Directory
+        # create a few files in the directory
+        $TestFile1 = New-Item -Path $TestDir -Name 'TestFile1.txt' -ItemType File
+        $TestFile2 = New-Item -Path $TestDir -Name 'TestFile2.txt' -ItemType File
+        $TestFile3 = New-Item -Path $TestDir -Name 'TestFile3.txt' -ItemType File
+
+        # set the last write time of the files, so that they are all at least
+        # the minimum age
+        $TestFile1.LastWriteTime = (Get-Date).AddSeconds(-$script:MinimumAge * 1)
+        $TestFile2.LastWriteTime = (Get-Date).AddSeconds(-$script:MinimumAge * 2)
+        $TestFile3.LastWriteTime = (Get-Date).AddSeconds(-$script:MinimumAge * 3)
+    }
+
+    It 'should return true if all files in a directory are at least the minimum age' {
+        Test-ProperlyAged $TestDir | Should -Be $true
+    }
+
+    It 'should return false if any file in a directory is less than the minimum age' {
+        # change the minimum age so that one of the files is too young
+        $Script:MinimumAge = 60
+        Test-ProperlyAged $TestDir | Should -Be $false
+    }
+
+    It 'has a default MinimumAge of 30 seconds' {
+        $Script:MinimumAge | Should -Be 30
+    }
+
 }
